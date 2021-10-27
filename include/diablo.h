@@ -19,12 +19,12 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define IS_BIG_ENDIAN (!*(unsigned char*)&(uint16_t){1})
-
 // Counting
-size_t count_eq(uint8_t const* const src,
-                size_t const off,
-                size_t const len,
-                uint8_t const byte);
+
+// Count the bytes in the range equal to the given one.
+size_t diablo_count_eq(uint8_t const* const src,
+                       size_t const off,
+                       size_t const len,
+                       uint8_t const byte);
 
 #endif /* DIABLO_H */
