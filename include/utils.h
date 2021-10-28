@@ -15,12 +15,8 @@
  */
 #pragma once
 #include <stdint.h>
-#include <stdlib.h>
 
-// Counting
-
-// Count the bytes in the range equal to the given one.
-size_t diablo_count_eq(uint8_t const* const src,
-                       size_t const off,
-                       size_t const len,
-                       uint8_t const byte);
+// Fill every 8-byte 'lane' with the same value.
+inline uint64_t broadcast(uint8_t const byte) {
+  return byte * 0x0101010101010101ULL;
+}
