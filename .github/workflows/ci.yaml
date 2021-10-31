@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push: 
+    branches: [main]
+
+jobs:
+  linux:
+    name: Linux check: ${{ matrix.cc }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        cc: ['gcc', 'clang']
+    steps:
+      - name: Checkout base repo
+        uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install meson luajit
+      - name: Configure Meson
+        run: CC=${{ matrix.cc }} meson setup build
+      - name: Build and test
+        run: cd build && ninja test
+  mac:
+    name: Mac check: ${{ matrix.cc }}-${{ matrix.ld }}
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        cc: ['gcc', 'clang']
+    steps:
+      - name: Checkout base repo
+        uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          brew update
+          brew install meson luajit
+      - name: Configure Meson
+        run: CC=${{ matrix.cc }} meson setup build
+      - name: Build and test
+        run: cd build && ninja test
+
