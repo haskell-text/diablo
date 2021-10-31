@@ -21,11 +21,11 @@ jobs:
         uses: uraimo/run-on-arch-action@v2.1.1
         with:
           arch: ${{ matrix.arch }}
-          distro: bullseye
+          distro: alpine_latest
           githubToken: ${{ github.token }}
           install: |
-            apt-get update -q -y
-            apt-get install clang gcc luajit meson
+            apk update
+            apk add clang gcc luajit meson musl-dev
           run: |
             CC=${{ matrix.cc }} meson setup build
             cd build
