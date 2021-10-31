@@ -1,14 +1,11 @@
 " Enable hlint and GHC via Cabal
-let g:ale_linters = {'c': ['clangtidy', 'cc'], 'lua': ['luacheck']}
+let g:ale_linters = {'c': ['clangtidy'], 'lua': ['luacheck']}
 " ... only
 let g:ale_linters_explicit = 1
 " Don't lint until I save
 let g:ale_lint_on_text_changed = 'never'
 let g:ale_lint_on_insert_leave = 0
 let g:ale_lint_on_enter = 0
-
-call ale#Set('c_cc_executable', 'clang')
-call ale#Set('c_cc_options', '-std=c11 -Wall -Wextra -Wpedantic -fsanitizer=address')
 
 call ale#Set('lua_luacheck_options', '-std=luajit')
 

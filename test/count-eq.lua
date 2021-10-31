@@ -6,6 +6,6 @@ typedef struct {
   size_t off;
   size_t len;
   uint8_t * src;
-  uint8_t byte
+  uint8_t byte;
 } count_eq_data;
 ]]

@@ -15,7 +15,11 @@
  */
 #include <stddef.h>
 #include "../include/diablo.h"
-#include "../include/utils.h"
+
+// Fill every 8-byte 'lane' with the same value.
+static inline uint64_t broadcast(uint8_t const byte) {
+  return byte * 0x0101010101010101ULL;
+}
 
 size_t diablo_count_eq(uint8_t const* const src,
                        size_t const off,
