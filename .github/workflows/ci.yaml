@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         cc: ['gcc', 'clang']
-        arch: ['aarch64', 's390x', 'armv7', 'ppc64le']
+        arch: ['aarch64', 'armv7', 'ppc64le']
     steps:
       - name: Checkout base repo
         uses: actions/checkout@v2
