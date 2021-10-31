@@ -8,7 +8,7 @@ on:
 
 jobs:
   linux:
-    name: Linux check: ${{ matrix.cc }}
+    name: Linux with ${{ matrix.cc }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -25,7 +25,7 @@ jobs:
       - name: Build and test
         run: cd build && ninja test
   mac:
-    name: Mac check: ${{ matrix.cc }}-${{ matrix.ld }}
+    name: Mac with ${{ matrix.cc }}-${{ matrix.ld }}
     runs-on: macos-latest
     strategy:
       matrix:
