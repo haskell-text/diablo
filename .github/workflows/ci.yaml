@@ -7,33 +7,23 @@ on:
     branches: [main]
 
 jobs:
-  linux:
-    name: Linux with ${{ matrix.cc }}
-    runs-on: ubuntu-latest
+  native:
+    name: ${{ matrix.os }} with ${{ matrix.cc }}
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         cc: ['gcc', 'clang']
+        os: [ubuntu-latest, macos-latest]
     steps:
       - name: Checkout base repo
         uses: actions/checkout@v2
-      - name: Install dependencies
+      - name: Install dependencies (Linux)
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           sudo apt-get update
           sudo apt-get install meson luajit
-      - name: Configure Meson
-        run: CC=${{ matrix.cc }} meson setup build
-      - name: Build and test
-        run: cd build && ninja test
-  mac:
-    name: Mac with ${{ matrix.cc }}-${{ matrix.ld }}
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        cc: ['gcc', 'clang']
-    steps:
-      - name: Checkout base repo
-        uses: actions/checkout@v2
-      - name: Install dependencies
+      - name: Install dependencies (Mac)
+        if: ${{ matrix.os == 'macos-latest' }}
         run: |
           brew update
           brew install meson luajit
@@ -41,4 +31,3 @@ jobs:
         run: CC=${{ matrix.cc }} meson setup build
       - name: Build and test
         run: cd build && ninja test
-
