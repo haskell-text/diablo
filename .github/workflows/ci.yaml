@@ -7,6 +7,29 @@ on:
     branches: [main]
 
 jobs:
+  emulated:
+    name: ${{ matrix.arch }} with ${{ matrix.cc }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        cc: ['gcc', 'clang']
+        arch: ['aarch64', 's390x', 'armv7', 'ppc64le']
+    steps:
+      - name: Checkout base repo
+        uses: actions/checkout@v2
+      - name: Build and test
+        uses: uraimo/run-on-arch-action@v2.1.1
+        with:
+          arch: ${{ matrix.arch }}
+          distro: bullseye
+          githubToken: ${{ github.token }}
+          install: |
+            apt-get update -q -y
+            apt-get install clang gcc luajit meson
+          run: |
+            CC=${{ matrix.cc }} meson setup build
+            cd build
+            ninja test
   native:
     name: ${{ matrix.os }} with ${{ matrix.cc }}
     runs-on: ${{ matrix.os }}
