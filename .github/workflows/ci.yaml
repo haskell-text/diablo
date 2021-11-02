@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         cc: ['gcc', 'clang']
-        arch: ['aarch64', 'armv7', 'ppc64le']
+        arch: ['aarch64', 'armv7', 'ppc64le', 's390x']
     steps:
       - name: Checkout base repo
         uses: actions/checkout@v2
@@ -25,7 +25,7 @@ jobs:
           githubToken: ${{ github.token }}
           install: |
             apk update
-            apk add ${{ matrix.cc }} luajit meson musl-dev build-base
+            apk add ${{ matrix.cc }} meson musl-dev build-base py3-cffi
           run: |
             CC=${{ matrix.cc }} meson setup build
             cd build
@@ -44,12 +44,12 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           sudo apt-get update
-          sudo apt-get install meson luajit
+          sudo apt-get install meson python3-cffi
       - name: Install dependencies (Mac)
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
           brew update
-          brew install meson luajit
+          brew install meson python3-cffi
       - name: Configure Meson
         run: CC=${{ matrix.cc }} meson setup build
       - name: Build and test
@@ -72,8 +72,7 @@ jobs:
             git
             ${{ matrix.cc }}
             mingw-w64-x86_64-meson
-            mingw-w64-x86_64-luajit
-            mingw-w64-x86_64-python3
+            mingw-w64-x86_64-python-cffi
       - name: Checkout base repo
         uses: actions/checkout@v2
       - name: Configure meson

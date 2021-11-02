@@ -10,15 +10,15 @@ assert(compiler.get_id() == 'gcc' or compiler.get_id() == 'clang',
 
 srcs = ['src/count-eq.c']
 
-luajit = find_program('luajit', '/usr/bin/luajit')
-
 libs = both_libraries('diablo', srcs,
   c_args: ['-Wall', '-Wextra', '-Wpedantic']
   )
 
-count_eq_test_file = files('test/count-eq.lua')
+py = import('python').find_installation('python3', modules : ['cffi'])
 
-test('count_eq', luajit,
+count_eq_test_file = files('test/count-eq.py')
+
+test('count_eq', py,
   args: [count_eq_test_file],
   depends: libs.get_shared_lib()
   )
