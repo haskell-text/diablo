@@ -8,12 +8,13 @@ on:
 
 jobs:
   emulated:
-    name: ${{ matrix.arch }} with ${{ matrix.cc }}
+    name: ${{ matrix.arch }} on ${{ matrix.distro}} with ${{ matrix.cc }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
         cc: ['gcc', 'clang']
         arch: ['aarch64', 'armv7', 'ppc64le', 's390x']
+        distro: ['alpine_latest', 'bullseye']
     steps:
       - name: Checkout base repo
         uses: actions/checkout@v2
@@ -21,11 +22,19 @@ jobs:
         uses: uraimo/run-on-arch-action@v2.1.1
         with:
           arch: ${{ matrix.arch }}
-          distro: alpine_latest
+          distro: ${{ matrix.distro }}
           githubToken: ${{ github.token }}
           install: |
-            apk update
-            apk add ${{ matrix.cc }} meson musl-dev build-base py3-cffi
+            case "${{ matrix.distro }}" in
+              bullseye)
+                apt-get update -q -y
+                apt-get install -q -y ${{ matrix.cc }} meson python3-cffi python3-distutils
+                ;;
+              alpine*)
+                apk update
+                apk add ${{ matrix.cc }} meson musl-dev build-base py3-cffi
+                ;;
+            esac
           run: |
             CC=${{ matrix.cc }} meson setup build
             cd build
@@ -49,7 +58,10 @@ jobs:
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
           brew update
-          brew install meson python3-cffi
+          brew install meson pkg-config libffi
+      - name: Set up python-cffi (Mac)
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: PKG_CONFIG_PATH=/usr/local/opt/libffi/lib/pkgconfig pip install cffi
       - name: Configure Meson
         run: CC=${{ matrix.cc }} meson setup build
       - name: Build and test
