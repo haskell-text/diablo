@@ -61,7 +61,7 @@ jobs:
           brew install meson pkg-config libffi
       - name: Set up python-cffi (Mac)
         if: ${{ matrix.os == 'macos-latest' }}
-        run: PKG_CONFIG_PATH=/usr/local/opt/libffi/lib/pkgconfig pip install cffi
+        run: PKG_CONFIG_PATH=/usr/local/opt/libffi/lib/pkgconfig pip3 install cffi
       - name: Configure Meson
         run: CC=${{ matrix.cc }} meson setup build
       - name: Build and test
