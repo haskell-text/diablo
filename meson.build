@@ -20,6 +20,6 @@ py = import('python').find_installation('python3',
 count_eq_test_file = files('test/count-eq.py')
 
 test('count_eq', py,
-  args: [count_eq_test_file],
+  args: [count_eq_test_file, libs.get_shared_lib().full_path()],
   depends: libs.get_shared_lib()
   )
