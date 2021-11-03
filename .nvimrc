@@ -15,6 +15,9 @@ let g:neoformat_c_clangformat = {
       \}
 let g:neoformat_enabled_c = ['clangformat']
 
+" Configure Neoformat to use yapf for Python
+let g:neoformat_enabled_c = ['yapf']
+
 " Treat .h files as C
 augroup project
   autocmd!

@@ -14,7 +14,8 @@ libs = both_libraries('diablo', srcs,
   c_args: ['-Wall', '-Wextra', '-Wpedantic']
   )
 
-py = import('python').find_installation('python3', modules : ['cffi'])
+py = import('python').find_installation('python3', 
+  modules : ['cffi', 'hypothesis'])
 
 count_eq_test_file = files('test/count-eq.py')
 
