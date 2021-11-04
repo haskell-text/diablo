@@ -1,4 +1,4 @@
-from cffi import FFI
+from cffi import FFI  # type: ignore
 import weakref
 import sys
 from hypothesis import given
@@ -6,7 +6,7 @@ from hypothesis.strategies import composite, binary, integers
 
 ffi = FFI()
 
-global_weakkeydict = weakref.WeakKeyDictionary()
+global_weakkeydict: weakref.WeakKeyDictionary = weakref.WeakKeyDictionary()
 
 ffi.cdef("""
 typedef struct {
@@ -49,13 +49,15 @@ def mk_count_eq_data(draw):
     global_weakkeydict[dat_c] = src_c
     return dat_c
 
+
 @given(mk_count_eq_data())
 def test_count_eq(dat_c):
     expected_count = 0
     for i in range(dat_c.len):
         if dat_c.src[dat_c.off + i] == dat_c.byte:
             expected_count = expected_count + 1
-    actual_count = C.diablo_count_eq(dat_c.src, dat_c.off, dat_c.len, dat_c.byte)
+    actual_count = C.diablo_count_eq(dat_c.src, dat_c.off, dat_c.len,
+                                     dat_c.byte)
     assert (expected_count == actual_count)
 
 
