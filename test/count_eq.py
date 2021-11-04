@@ -1,6 +1,7 @@
-from cffi import FFI  # type: ignore
+"""Property tests for diablo_count_eq function."""
 import weakref
 import sys
+from cffi import FFI  # type: ignore
 from hypothesis import given
 from hypothesis.strategies import composite, binary, integers
 
@@ -28,6 +29,7 @@ C = ffi.dlopen(sys.argv[1])
 
 @composite
 def mk_count_eq_data(draw):
+    """Generator for input data appropriate to diablo_count_eq"""
     src = draw(binary(min_size=0, max_size=1000))
     full_len = len(src)
     if full_len == 0:
@@ -52,14 +54,15 @@ def mk_count_eq_data(draw):
 
 @given(mk_count_eq_data())
 def test_count_eq(dat_c):
+    """Tests that diablo_count_eq behaves correctly versus a reference spec."""
     expected_count = 0
     for i in range(dat_c.len):
         if dat_c.src[dat_c.off + i] == dat_c.byte:
             expected_count = expected_count + 1
     actual_count = C.diablo_count_eq(dat_c.src, dat_c.off, dat_c.len,
                                      dat_c.byte)
-    assert (expected_count == actual_count)
+    assert expected_count == actual_count
 
 
 if __name__ == "__main__":
-    test_count_eq()
+    test_count_eq()  # pylint: disable=no-value-for-parameter

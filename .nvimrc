@@ -1,5 +1,5 @@
 " Enable hlint and GHC via Cabal
-let g:ale_linters = {'c': ['clangtidy'], 'sh': ['shellcheck'], 'python': ['mypy']}
+let g:ale_linters = {'c': ['clangtidy'], 'sh': ['shellcheck'], 'python': ['mypy', 'pylint']}
 " ... only
 let g:ale_linters_explicit = 1
 " Don't lint until I save

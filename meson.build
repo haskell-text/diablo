@@ -17,7 +17,7 @@ libs = both_libraries('diablo', srcs,
 py = import('python').find_installation('python3', 
   modules : ['cffi', 'hypothesis'])
 
-count_eq_test_file = files('test/count-eq.py')
+count_eq_test_file = files('test/count_eq.py')
 
 test('count_eq', py,
   args: [count_eq_test_file, libs.get_shared_lib().full_path()],
