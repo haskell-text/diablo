@@ -52,7 +52,7 @@ def mk_count_eq_data(draw):
     return dat_c
 
 
-@given(mk_count_eq_data())
+@given(mk_count_eq_data())  # pylint: disable=no-value-for-parameter
 def test_count_eq(dat_c):
     """Tests that diablo_count_eq behaves correctly versus a reference spec."""
     expected_count = 0
