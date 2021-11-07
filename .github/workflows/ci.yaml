@@ -7,20 +7,6 @@ on:
     branches: [main]
 
 jobs:
-  lint:
-    name: 'Lint Python code'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout base repo
-        uses: actions/checkout@v2
-      - name: Install tooling
-        run: |
-          sudo apt-get update
-          sudo apt-get install pylint mypy python3-cffi python3-hypothesis
-      - name: Run Pylint
-        run: pylint -dC0103 test/*
-      - name: Run Mypy
-        run: mypy test
   format:
     name: 'Check formatting'
     runs-on: ubuntu-latest
@@ -32,9 +18,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install clang-format python3-yapf yapf3
       - name: Run clang-format on C code
-        run: clang-format --style=Chromium src/* include/*
+        run: clang-format --style=Chromium src/* include/* bench/*.c
       - name: Run yapf on Python code
-        run: yapf3 --recursive test
+        run: yapf3 --recursive test bench
   emulated:
     name: ${{ matrix.arch }} on ${{ matrix.distro}} with ${{ matrix.cc }}
     runs-on: ubuntu-latest
@@ -42,7 +28,7 @@ jobs:
       matrix:
         cc: ['gcc', 'clang']
         arch: ['aarch64', 'armv7', 'ppc64le', 's390x']
-        distro: ['alpine_latest', 'bullseye']
+        distro: ['alpine_latest', 'ubuntu20.04']
     steps:
       - name: Checkout base repo
         uses: actions/checkout@v2
@@ -54,19 +40,23 @@ jobs:
           githubToken: ${{ github.token }}
           install: |
             case "${{ matrix.distro }}" in
-              bullseye)
+              ubuntu*)
                 apt-get update -q -y
-                apt-get install -q -y ${{ matrix.cc }} meson python3-cffi python3-distutils python3-hypothesis
+                apt-get install -q -y software-properties-common
+                add-apt-repository ppa:pipewire-debian/meson-ninja
+                apt-get update -q -y
+                apt-get install -q -y ${{ matrix.cc }} meson python3-cffi python3-distutils python3-hypothesis python3-pytest-benchmark python3-pytest
                 ;;
               alpine*)
                 apk update
-                apk add ${{ matrix.cc }} meson musl-dev build-base py3-cffi py3-hypothesis
+                apk add ${{ matrix.cc }} meson musl-dev build-base py3-cffi py3-hypothesis py3-pytest-benchmark
                 ;;
             esac
           run: |
             CC=${{ matrix.cc }} meson setup build
             cd build
             ninja test
+            ninja count-eq-bench
   native:
     name: ${{ matrix.os }} with ${{ matrix.cc }}
     runs-on: ${{ matrix.os }}
@@ -81,17 +71,23 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           sudo apt-get update
-          sudo apt-get install meson python3-cffi python3-hypothesis
+          sudo apt-get install software-properties-common
+          sudo add-apt-repository ppa:pipewire-debian/meson-ninja
+          sudo apt-get update
+          sudo apt-get install meson python3-cffi python3-hypothesis python3-pytest-benchmark python3-pytest
       - name: Install dependencies (Mac)
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
           brew update
           brew install meson pkg-config libffi
-          PKG_CONFIG_PATH=/usr/local/opt/libffi/lib/pkgconfig pip3 install cffi hypothesis
+          PKG_CONFIG_PATH=/usr/local/opt/libffi/lib/pkgconfig pip3 install cffi hypothesis pytest-benchmark pytest
       - name: Configure Meson
         run: CC=${{ matrix.cc }} meson setup build
       - name: Build and test
         run: cd build && ninja test
+      - name: Benchmark (Linux)
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: cd build && ninja count-eq-bench
   mingw:
     name: MinGW with ${{ matrix.cc }}
     runs-on: windows-latest
@@ -112,6 +108,8 @@ jobs:
             mingw-w64-x86_64-meson
             mingw-w64-x86_64-python-cffi
             mingw-w64-x86_64-python-hypothesis
+            mingw-w64-x86_64-python-pytest-benchmark
+            mingw-w64-x86_64-python-pytest
       - name: Checkout base repo
         uses: actions/checkout@v2
       - name: Configure meson
