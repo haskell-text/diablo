@@ -34,6 +34,65 @@ static inline size_t retrieve_count (count_eq_env const* env);
 static inline void count_block (uint8_t const* const src,
                                 count_eq_env* env);
 
+#if (__i386__ && __SSE2__)
+#include <emmintrin.h>
+// SSE2-only implementation. This is only going to be used on x86 (not 64), so
+// it _can't_ have AVX.
+
+struct count_eq_env {
+  __m128i matches;
+  __m128i counts;
+};
+
+__attribute__((pure))
+static inline count_eq_env setup_env (uint8_t const byte) {
+  return (count_eq_env){ .matches = _mm_set1_epi8(byte),
+                         .counts = _mm_setzero_si128() };
+}
+
+__attribute__((pure, leaf))
+static inline size_t retrieve_block_size (count_eq_env const* env) {
+  // This suppresses the 'unused' warning, without enforcing reading from env.
+  // See: https://stackoverflow.com/a/4851173/2629787
+  (void)(sizeof((env), 0));
+  return 128;
+}
+
+__attribute__((leaf))
+static inline size_t retrieve_count (count_eq_env const* env) {
+  uint64_t results[2];
+  _mm_storeu_si128((__m128i*)results, env->counts);
+  return results[0] + results[1];
+}
+
+static inline void count_block (uint8_t const* const src,
+                                count_eq_env* env) {
+  __m128i const* big_ptr = (__m128i const*)src;
+  // Load eight blocks, compare with target. This gives 0xFF on a match, and 0x00
+  // otherwise, per lane.
+  // This is a manual 8x unroll.
+  __m128i const results[8] = {
+    _mm_cmpeq_epi8(_mm_loadu_si128(big_ptr), env->matches),
+    _mm_cmpeq_epi8(_mm_loadu_si128(big_ptr + 1), env->matches),
+    _mm_cmpeq_epi8(_mm_loadu_si128(big_ptr + 2), env->matches),
+    _mm_cmpeq_epi8(_mm_loadu_si128(big_ptr + 3), env->matches),
+    _mm_cmpeq_epi8(_mm_loadu_si128(big_ptr + 4), env->matches),
+    _mm_cmpeq_epi8(_mm_loadu_si128(big_ptr + 5), env->matches),
+    _mm_cmpeq_epi8(_mm_loadu_si128(big_ptr + 6), env->matches),
+    _mm_cmpeq_epi8(_mm_loadu_si128(big_ptr + 7), env->matches)
+ };
+  // Since a match is 0xFF, which is -1, we can add our blocks together to get a
+  // per-lane count of occurrences, except negative.
+  __m128i const summed = _mm_add_epi8(_mm_add_epi8(_mm_add_epi8(results[0], results[1]),
+                                                   _mm_add_epi8(results[2], results[3])),
+                                      _mm_add_epi8(_mm_add_epi8(results[4], results[5]),
+                                                   _mm_add_epi8(results[6], results[7])));
+  // By taking the sum of absolute differences with 0x00 in all lanes, we end up
+  // with two 64-bit sums, counting the number of occurences in the 'left' 8
+  // lanes and the 'right' 8 lanes respectively. We then accumulate those.
+  env->counts = _mm_add_epi64(env->counts, _mm_sad_epu8(summed, _mm_setzero_si128()));
+}
+#else
 // Fallback implementation.
 
 // Fill every 8-byte 'lane' with the same value.
@@ -57,7 +116,7 @@ static inline count_eq_env setup_env (uint8_t const byte) {
 
 __attribute__((pure, leaf))
 static inline size_t retrieve_block_size (count_eq_env const* env) {
-  // This suppressed the 'unused' warning, without enforcing reading from env.
+  // This suppresses the 'unused' warning, without enforcing reading from env.
   // See: https://stackoverflow.com/a/4851173/2629787
   (void)(sizeof((env), 0));
   return 64;
@@ -97,6 +156,7 @@ static inline void count_block (uint8_t const* const src,
   result |= load_and_set(big_ptr, 7, env->matches, env->mask);
   env->count += __builtin_popcountll(result);
 }
+#endif
 
 // Function implementation (fairly generic).
 size_t diablo_count_eq(uint8_t const* const src,
