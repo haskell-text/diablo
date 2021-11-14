@@ -24,19 +24,23 @@ typedef struct count_eq_env count_eq_env;
 // Build an environment based on what byte we're looking for.
 static inline count_eq_env setup_env (uint8_t const byte);
 
+// Retrieve our block size (in bytes).
+static inline size_t retrieve_block_size (count_eq_env const* env);
+
 // Retrieve the count.
 static inline size_t retrieve_count (count_eq_env const* env);
 
-// Load and count a 64-byte block.
+// Load and count a block.
 static inline void count_block (uint8_t const* const src,
                                 count_eq_env* env);
 
+// Fallback implementation.
+
 // Fill every 8-byte 'lane' with the same value.
+__attribute__((pure, leaf))
 static inline uint64_t broadcast(uint8_t const byte) {
   return byte * 0x0101010101010101ULL;
 }
-
-// Fallback implementation.
 
 struct count_eq_env {
   uint64_t matches;
@@ -44,17 +48,29 @@ struct count_eq_env {
   size_t count;
 };
 
+__attribute__((pure))
 static inline count_eq_env setup_env (uint8_t const byte) {
-  return (count_eq_env){ .matches = broadcast(byte), .mask = broadcast(0x7F), 
+  return (count_eq_env){ .matches = broadcast(byte), 
+                         .mask = broadcast(0x7F), 
                          .count = 0 };
 }
 
+__attribute__((pure, leaf))
+static inline size_t retrieve_block_size (count_eq_env const* env) {
+  // This suppressed the 'unused' warning, without enforcing reading from env.
+  // See: https://stackoverflow.com/a/4851173/2629787
+  (void)(sizeof((env), 0));
+  return 64;
+}
+
+__attribute__((leaf))
 static inline size_t retrieve_count (count_eq_env const* env) {
   return env->count;
 }
 
 // Load a 64-bit word, then set every byte which matches to 0x80, while setting
 // the others to 0x00.
+__attribute__((leaf))
 static inline uint64_t load_and_set (uint64_t const* const big_ptr,
                                      size_t const i,
                                      uint64_t const matches,
@@ -64,7 +80,8 @@ static inline uint64_t load_and_set (uint64_t const* const big_ptr,
   return (~(tmp | input | mask) >> i);
 }
 
-// Load and count a 64-byte block.
+// We use the method described in "Bit Twiddling Hacks".
+// Source: https://graphics.stanford.edu/~seander/bithacks.html#ZeroInWord
 static inline void count_block (uint8_t const* const src,
                                 count_eq_env* env) {
   uint64_t const* const big_ptr = (uint64_t const* const)src;
@@ -86,18 +103,16 @@ size_t diablo_count_eq(uint8_t const* const src,
                        size_t const off,
                        size_t const len,
                        uint8_t const byte) {
-  size_t count = 0; 
-  // We aim to step 64 bytes at a time.
-  size_t const big_strides = len / 64;
-  size_t const small_strides = len % 64;
+  size_t count = 0;
+  count_eq_env env = setup_env(byte);
+  size_t const block_size = retrieve_block_size(&env);
+  size_t const big_strides = len / block_size;
+  size_t const small_strides = len % block_size;
   uint8_t const* ptr = (uint8_t const*)&(src[off]);
   if (big_strides != 0) {
-    // We use the method described in "Bit Twiddling Hacks".
-    // Source: https://graphics.stanford.edu/~seander/bithacks.html#ZeroInWord
-    count_eq_env env = setup_env(byte);
     for (size_t i = 0; i < big_strides; i++) {
       count_block(ptr, &env);
-      ptr += 64;
+      ptr += block_size;
     }
     count += retrieve_count(&env); 
   }
