@@ -34,7 +34,7 @@ static inline size_t retrieve_count (count_eq_env const* env);
 static inline void count_block (uint8_t const* const src,
                                 count_eq_env* env);
 
-#if (__i386__ && __SSE2__)
+#if ((__i386__ && __SSE2__) || __x86_64__)
 #include <emmintrin.h>
 // SSE2-only implementation. This is only going to be used on x86 (not 64), so
 // it _can't_ have AVX.
