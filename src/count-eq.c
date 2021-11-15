@@ -55,7 +55,7 @@ static inline size_t retrieve_block_size (count_eq_env const* env) {
   // This suppresses the 'unused' warning, without enforcing reading from env.
   // See: https://stackoverflow.com/a/4851173/2629787
   (void)(sizeof((env), 0));
-  return 128;
+  return 64;
 }
 
 __attribute__((leaf))
@@ -68,25 +68,19 @@ static inline size_t retrieve_count (count_eq_env const* env) {
 static inline void count_block (uint8_t const* const src,
                                 count_eq_env* env) {
   __m128i const* big_ptr = (__m128i const*)src;
-  // Load eight blocks, compare with target. This gives 0xFF on a match, and 0x00
+  // Load four blocks, compare with target. This gives 0xFF on a match, and 0x00
   // otherwise, per lane.
-  // This is a manual 8x unroll.
-  __m128i const results[8] = {
+  // This is a manual 4x unroll.
+  __m128i const results[4] = {
     _mm_cmpeq_epi8(_mm_loadu_si128(big_ptr), env->matches),
     _mm_cmpeq_epi8(_mm_loadu_si128(big_ptr + 1), env->matches),
     _mm_cmpeq_epi8(_mm_loadu_si128(big_ptr + 2), env->matches),
     _mm_cmpeq_epi8(_mm_loadu_si128(big_ptr + 3), env->matches),
-    _mm_cmpeq_epi8(_mm_loadu_si128(big_ptr + 4), env->matches),
-    _mm_cmpeq_epi8(_mm_loadu_si128(big_ptr + 5), env->matches),
-    _mm_cmpeq_epi8(_mm_loadu_si128(big_ptr + 6), env->matches),
-    _mm_cmpeq_epi8(_mm_loadu_si128(big_ptr + 7), env->matches)
  };
   // Since a match is 0xFF, which is -1, we can add our blocks together to get a
   // per-lane count of occurrences, except negative.
-  __m128i const summed = _mm_add_epi8(_mm_add_epi8(_mm_add_epi8(results[0], results[1]),
-                                                   _mm_add_epi8(results[2], results[3])),
-                                      _mm_add_epi8(_mm_add_epi8(results[4], results[5]),
-                                                   _mm_add_epi8(results[6], results[7])));
+  __m128i const summed = _mm_add_epi8(_mm_add_epi8(results[0], results[1]),
+                                      _mm_add_epi8(results[2], results[3]));
   // By taking the sum of absolute differences with 0x00 in all lanes, we end up
   // with two 64-bit sums, counting the number of occurences in the 'left' 8
   // lanes and the 'right' 8 lanes respectively. We then accumulate those.
