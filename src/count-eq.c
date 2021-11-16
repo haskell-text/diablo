@@ -30,6 +30,52 @@ static inline size_t count_eq_rest (uint8_t const* const src,
   return count;
 }
 
+#if (__i386__ && __SSE2__)
+// Pure SSE implementation, as i386 _cannot_ have AVX.
+
+#include <emmintrin.h>
+
+size_t diablo_count_eq (uint8_t const* const src,
+                        size_t const off,
+                        size_t const len,
+                        uint8_t const byte) {
+  size_t count = 0;
+  size_t const big_strides = len / 64;
+  size_t const small_strides = len % 64;
+  uint8_t const* ptr = (uint8_t const*)&(src[off]);
+  if (big_strides != 0) {
+    __m128i const matches = _mm_set1_epi8(byte);
+    __m128i counts = _mm_setzero_si128();
+    for (size_t i = 0; i < big_strides; i++) {
+      __m128i const* big_ptr = (__m128i const*)ptr;
+      // Load and compare. This leaves 0xFF in a matching lane, and 0x00
+      // otherwise.
+      //
+      // This is a manual 4x unroll.
+      __m128i const results[4] = {
+        _mm_cmpeq_epi8(matches, _mm_loadu_si128(big_ptr)),
+        _mm_cmpeq_epi8(matches, _mm_loadu_si128(big_ptr + 1)),
+        _mm_cmpeq_epi8(matches, _mm_loadu_si128(big_ptr + 2)),
+        _mm_cmpeq_epi8(matches, _mm_loadu_si128(big_ptr + 3))
+      };
+      // Since 0xFF is -1, we can get a lane-by-lane match count (except
+      // negative) by adding.
+      __m128i const summed = _mm_add_epi8(_mm_add_epi8(results[0], results[1]),
+                                          _mm_add_epi8(results[2], results[3]));
+      // By taking the sum of absolute differences with 0x00 in each lane, we
+      // get two 64-bit counts, which we accumulate.
+      counts = _mm_add_epi64(counts, _mm_sad_epu8(summed, _mm_setzero_si128()));
+      ptr += 64;
+    }
+    // Evacuate results and sum.
+    uint64_t results[2];
+    _mm_storeu_si128((__m128i*)results, counts);
+    count += (results[0] + results[1]);
+  }
+  count += count_eq_rest(ptr, small_strides, byte);
+  return count;
+}
+#else
 // Fallback implementation
 //
 // We use the method described in "Bit Twiddling Hacks".
@@ -82,3 +128,4 @@ size_t diablo_count_eq (uint8_t const* const src,
   count += count_eq_rest(ptr, small_strides, byte);
   return count;
 }
+#endif
