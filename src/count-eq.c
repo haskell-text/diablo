@@ -75,6 +75,48 @@ size_t diablo_count_eq (uint8_t const* const src,
   count += count_eq_rest(ptr, small_strides, byte);
   return count;
 }
+#elif (__ARM_NEON)
+// NEON implementation.
+
+#include <arm_neon.h>
+
+size_t diablo_count_eq (uint8_t const* const src,
+                        size_t const off,
+                        size_t const len,
+                        uint8_t const byte) {
+  size_t count = 0;
+  size_t const big_strides = len / 64;
+  size_t const small_strides = len % 64;
+  uint8_t const* ptr = (uint8_t const*)&(src[off]);
+  if (big_strides != 0) {
+    uint8x16_t const matches = vdupq_n_u8(byte);
+    uint64x2_t counts = vdupq_n_u64(0);
+    for (size_t i = 0; i < big_strides; i++) {
+      // Load and compare, then reinterpret as signed. This puts 0xFF in a
+      // matching lane (thus, -1), and 0x00 in a non-matching lane (thus, 0).
+      //
+      // This is a manual 4x unroll.
+      int8x16_t const results[4] = {
+        vreinterpretq_s8_u8(vceqq_u8(matches, vld1q_u8(ptr))),
+        vreinterpretq_s8_u8(vceqq_u8(matches, vld1q_u8(ptr + 16))),
+        vreinterpretq_s8_u8(vceqq_u8(matches, vld1q_u8(ptr + 32))),
+        vreinterpretq_s8_u8(vceqq_u8(matches, vld1q_u8(ptr + 48)))
+      };
+      // Add everything to get between 0 and -4 in each lane, then take the
+      // absolute value and reinterpret as signed.
+      uint8x16_t const summed = 
+        vreinterpretq_u8_s8(vabsq_s8(vaddq_s8(vaddq_s8(results[0], results[1]),
+                                              vaddq_s8(results[2], results[3]))));
+      // Horizontally sum and accumulate.
+      counts = vaddq_u64(counts, vpaddlq_u32(vpaddlq_u16(vpaddlq_u8(summed))));
+      ptr += 64;
+    }
+    // Evacuate and sum.
+    count += (vgetq_lane_u64(counts, 0) + vgetq_lane_u64(counts, 1));
+  }
+  count += count_eq_rest(ptr, small_strides, byte);
+  return count;
+}
 #else
 // Fallback implementation
 //
