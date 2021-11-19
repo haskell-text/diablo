@@ -30,15 +30,13 @@ static inline size_t count_eq_rest (uint8_t const* const src,
   return count;
 }
 
-#if (__i386__ && __SSE2__)
-// Pure SSE implementation, as i386 _cannot_ have AVX.
-
+#if (__SSE2__)
 #include <emmintrin.h>
 
-size_t diablo_count_eq (uint8_t const* const src,
-                        size_t const off,
-                        size_t const len,
-                        uint8_t const byte) {
+static inline size_t count_eq_sse (uint8_t const* const src,
+                                   size_t const off,
+                                   size_t const len,
+                                   uint8_t const byte) {
   size_t count = 0;
   size_t const big_strides = len / 64;
   size_t const small_strides = len % 64;
@@ -75,6 +73,71 @@ size_t diablo_count_eq (uint8_t const* const src,
   count += count_eq_rest(ptr, small_strides, byte);
   return count;
 }
+
+#if (__i386__)
+// Pure SSE implementation, as 32-bit x86 _cannot_ have AVX.
+size_t diablo_count_eq (uint8_t const* const src,
+                        size_t const off,
+                        size_t const len,
+                        uint8_t const byte) {
+  return count_eq_sse(src, off, len, byte);
+}
+#else
+// Mixed AVX/SSE with runtime detection.
+#include <immintrin.h>
+
+__attribute__((target("avx2")))
+static inline size_t count_eq_avx (uint8_t const* const src,
+                                   size_t const off,
+                                   size_t const len,
+                                   uint8_t const byte) {
+  size_t count = 0;
+  size_t const big_strides = len / 64;
+  size_t const small_strides = len % 64;
+  uint8_t const* ptr = (uint8_t const*)&(src[off]);
+  if (big_strides != 0) {
+    __m256i const matches = _mm256_set1_epi8(byte);
+    __m256i counts = _mm256_setzero_si256();
+    for (size_t i = 0; i < big_strides; i++) {
+      __m256i const* big_ptr = (__m256i const*)ptr;
+      // Load and compare. This leaves 0xFF in a matching lane, and 0x00
+      // otherwise.
+      //
+      // This is a manual 2x unroll.
+      __m256i const results[2] = {
+        _mm256_cmpeq_epi8(matches, _mm256_loadu_si256(big_ptr)),
+        _mm256_cmpeq_epi8(matches, _mm256_loadu_si256(big_ptr + 1))
+      };
+      // Since 0xFF is -1, we can get a line-by-lane match count (except
+      // negative), by adding.
+      __m256i const summed = _mm256_add_epi8(results[0], results[1]);
+      // By taking the sum of absolute differences with 0x00 in each lane, we
+      // get four 64-bit counts, which we accumulate.
+      counts = _mm256_add_epi64(counts, _mm256_sad_epu8(summed, _mm256_setzero_si256()));
+      ptr += 64;
+    }
+    // Evacuate results and sum.
+    count += _mm256_extract_epi64(counts, 0) + 
+             _mm256_extract_epi64(counts, 1) +
+             _mm256_extract_epi64(counts, 2) + 
+             _mm256_extract_epi64(counts, 3);
+  }
+  count += count_eq_rest(ptr, small_strides, byte);
+  return count;
+}
+
+size_t diablo_count_eq (uint8_t const* const src,
+                        size_t const off,
+                        size_t const len,
+                        uint8_t const byte) {
+  __builtin_cpu_init();
+  if (__builtin_cpu_supports("avx2")) {
+    return count_eq_avx(src, off, len, byte);
+  }
+  return count_eq_sse(src, off, len, byte);
+}
+
+#endif
 #elif (__ARM_NEON)
 // NEON implementation.
 
