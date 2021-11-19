@@ -45,18 +45,17 @@ jobs:
                 apt-get install -q -y software-properties-common
                 add-apt-repository ppa:pipewire-debian/meson-ninja
                 apt-get update -q -y
-                apt-get install -q -y ${{ matrix.cc }} meson python3-cffi python3-distutils python3-hypothesis python3-pytest-benchmark python3-pytest
+                apt-get install -q -y ${{ matrix.cc }} meson python3-cffi python3-distutils python3-hypothesis
                 ;;
               alpine*)
                 apk update
-                apk add ${{ matrix.cc }} meson musl-dev build-base py3-cffi py3-hypothesis py3-pytest-benchmark
+                apk add ${{ matrix.cc }} meson musl-dev build-base py3-cffi py3-hypothesis
                 ;;
             esac
           run: |
             CC=${{ matrix.cc }} meson setup build
             cd build
             ninja test
-            ninja count-eq-bench
   native:
     name: ${{ matrix.os }} with ${{ matrix.cc }}
     runs-on: ${{ matrix.os }}
@@ -74,20 +73,17 @@ jobs:
           sudo apt-get install software-properties-common
           sudo add-apt-repository ppa:pipewire-debian/meson-ninja
           sudo apt-get update
-          sudo apt-get install meson python3-cffi python3-hypothesis python3-pytest-benchmark python3-pytest
+          sudo apt-get install meson python3-cffi python3-hypothesis
       - name: Install dependencies (Mac)
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
           brew update
           brew install meson pkg-config libffi
-          PKG_CONFIG_PATH=/usr/local/opt/libffi/lib/pkgconfig pip3 install cffi hypothesis pytest-benchmark pytest
+          PKG_CONFIG_PATH=/usr/local/opt/libffi/lib/pkgconfig pip3 install cffi hypothesis
       - name: Configure Meson
         run: CC=${{ matrix.cc }} meson setup build
       - name: Build and test
         run: cd build && ninja test
-      - name: Benchmark (Linux)
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: cd build && ninja count-eq-bench
   mingw:
     name: MinGW with ${{ matrix.cc }}
     runs-on: windows-latest
@@ -108,8 +104,6 @@ jobs:
             mingw-w64-x86_64-meson
             mingw-w64-x86_64-python-cffi
             mingw-w64-x86_64-python-hypothesis
-            mingw-w64-x86_64-python-pytest-benchmark
-            mingw-w64-x86_64-python-pytest
       - name: Checkout base repo
         uses: actions/checkout@v2
       - name: Configure meson
