@@ -134,7 +134,6 @@ being worked on.
 |x86         |Linux|1|No way to test|N/A|
 |x86-64      |Linux|1|Yes|`glibc`, `musl`|
 |x86-64      |MacOS|1|Yes|`libc`|
-|------------|-----|-|---|------|
 |aarch64     |Linux|2|Yes|`glibc`, `musl`|
 |x86         |FreeBSD|2|WIP|N/A|
 |x86-64      |FreeBSD|2|WIP|N/A|
@@ -158,7 +157,6 @@ being worked on.
 |ARMv7       |Linux|2|Yes|`glibc`, `musl`|
 |ARMel       |Linux|2|No way to test|N/A|
 |ARM         |iOS|2|No way to test|N/A|
-|------------|---|-|--------------|---|
 
 We provide SIMDed implementations of most functionality on the following
 architectures:
