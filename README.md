@@ -114,6 +114,30 @@ If you want to build the benchmarks, you will also need the following:
 Use the standard approach to building a Meson project: this will build both a
 static and a shared library by default.
 
+### Setup build directory
+
+```bash
+meson build
+```
+
+### Compile project
+
+```bash
+meson compile -C build
+```
+
+### Run tests
+
+```bash
+meson test -C build
+```
+
+### Run benchmarks
+
+```bash
+meson compile -C build count-eq-bench
+```
+
 ## What's your platform support?
 
 Our goal is supporting all of the [Tier 1 platforms for
